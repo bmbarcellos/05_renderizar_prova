@@ -1,264 +1,155 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <title>Prova Online – Universidade Federal Fluminense</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8">
+<title>Disparo de Prova – UFF</title>
 
-  <style>
-    :root {
-      --uff-blue: #005dab;
-      --uff-gray: #f2f2f2;
-      --danger: #b00020;
-    }
+<style>
+:root {
+  --uff-blue: #003A8F;
+  --bg: #F5F7FA;
+}
 
-    body {
-      font-family: Arial, sans-serif;
-      background: var(--uff-gray);
-      margin: 0;
-      padding: 0;
-    }
+body {
+  font-family: Arial, sans-serif;
+  background: var(--bg);
+  margin: 0;
+}
 
-    header {
-      background: var(--uff-blue);
-      color: white;
-      padding: 20px;
-      text-align: center;
-      font-size: 22px;
-      font-weight: bold;
-    }
+header {
+  background: var(--uff-blue);
+  color: white;
+  padding: 20px;
+  text-align: center;
+}
 
-    main {
-      max-width: 900px;
-      margin: 20px auto;
-      background: white;
-      padding: 25px;
-      border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
+main {
+  max-width: 700px;
+  margin: 30px auto;
+  background: white;
+  padding: 25px;
+  border-radius: 8px;
+}
 
-    .timer {
-      text-align: right;
-      font-size: 18px;
-      color: var(--danger);
-      font-weight: bold;
-    }
+label {
+  display: block;
+  margin-top: 15px;
+  font-weight: bold;
+}
 
-    .questao {
-      margin-bottom: 25px;
-      padding-bottom: 15px;
-      border-bottom: 1px solid #ddd;
-    }
+input, select {
+  width: 100%;
+  padding: 10px;
+  margin-top: 6px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
 
-    .questao h3 {
-      margin-bottom: 10px;
-    }
+small {
+  color: #555;
+}
 
-    label {
-      display: block;
-      margin-bottom: 6px;
-      cursor: pointer;
-    }
+button {
+  margin-top: 25px;
+  width: 100%;
+  padding: 14px;
+  background: var(--uff-blue);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+}
 
-    button {
-      background: var(--uff-blue);
-      color: white;
-      border: none;
-      padding: 12px 20px;
-      font-size: 16px;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-
-    button:hover {
-      opacity: 0.9;
-    }
-
-    footer {
-      text-align: center;
-      margin: 20px;
-      font-size: 13px;
-      color: #555;
-    }
-
-    .erro {
-      color: var(--danger);
-      font-weight: bold;
-      text-align: center;
-    }
-  </style>
+button:hover {
+  opacity: 0.9;
+}
+</style>
 </head>
 
 <body>
 
 <header>
-  Universidade Federal Fluminense<br>
-  <small>Aplicação de Prova Online</small>
+  <h1>Universidade Federal Fluminense</h1>
+  <p>Disparo de Prova Online</p>
 </header>
 
 <main>
 
-  <div class="timer" id="timer">Carregando tempo...</div>
+<form id="disparoForm">
 
-  <div id="erro" class="erro"></div>
+  <label>Módulos</label>
+  <select id="modulos" multiple required>
+    <option value="M1">M1</option>
+    <option value="M2">M2</option>
+    <option value="M3">M3</option>
+  </select>
+  <small>Segure Ctrl para selecionar múltiplos</small>
 
-  <form id="provaForm">
-    <div id="questoes"></div>
+  <label>Assuntos</label>
+  <select id="assuntos" multiple required>
+    <option value="temaA">temaA</option>
+    <option value="temaB">temaB</option>
+    <option value="temaC">temaC</option>
+  </select>
 
-    <button type="submit">Enviar Prova</button>
-  </form>
+  <label>Tipos de questão</label>
+  <select id="tipos" multiple required>
+    <option value="objetiva">Objetiva</option>
+    <option value="correlacao">Correlação</option>
+  </select>
+
+  <label>Quantidade de questões</label>
+  <input id="quantidade" type="number" min="1" required>
+
+  <label>Duração da prova (minutos)</label>
+  <input id="duracao" type="number" min="1" required>
+
+  <label>Data e hora de início</label>
+  <input id="inicio" type="datetime-local" required>
+
+  <button type="submit">Disparar Prova</button>
+
+</form>
 
 </main>
 
-<footer>
-  Sistema Eletrônico de Avaliação – UFF
-</footer>
-
 <script>
-/* =============================
-   CONFIGURAÇÃO
-============================= */
+const WEBHOOK_WF01 = "https://SEU_N8N/webhook/disparo_prova";
 
-// 🔗 URL DO WEBHOOK n8n (WF-03)
-const URL_PROVA = "https://SEU_N8N/webhook/prova";
-
-// 🔗 URL DO WEBHOOK n8n (WF-04)
-const URL_SUBMISSAO = "https://SEU_N8N/webhook/submeter_prova";
-
-/* =============================
-   VARIÁVEIS GLOBAIS
-============================= */
-
-let tempoRestante = 0;
-let provaId = "";
-let respostas = {};
-
-/* =============================
-   FUNÇÕES ANTIFRAUDE (BÁSICAS)
-============================= */
-
-// Bloqueia botão direito
-document.addEventListener("contextmenu", e => e.preventDefault());
-
-// Detecta saída da aba
-document.addEventListener("visibilitychange", () => {
-  if (document.hidden) {
-    alert("Atenção: sair da aba pode invalidar sua prova.");
-  }
-});
-
-/* =============================
-   CRONÔMETRO
-============================= */
-
-function iniciarTimer() {
-  const timerEl = document.getElementById("timer");
-
-  const interval = setInterval(() => {
-    if (tempoRestante <= 0) {
-      clearInterval(interval);
-      alert("Tempo encerrado. A prova será enviada.");
-      document.getElementById("provaForm").requestSubmit();
-      return;
-    }
-
-    const min = Math.floor(tempoRestante / 60);
-    const sec = tempoRestante % 60;
-    timerEl.textContent = `Tempo restante: ${min}:${sec.toString().padStart(2, "0")}`;
-
-    tempoRestante--;
-  }, 1000);
+function getMultiValues(selectId) {
+  return [...document.getElementById(selectId).selectedOptions].map(o => o.value);
 }
 
-/* =============================
-   CARREGAR PROVA
-============================= */
-
-async function carregarProva() {
-  try {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get("token");
-
-    if (!token) throw "Token não informado.";
-
-    const res = await fetch(`${URL_PROVA}?token=${token}`);
-    const data = await res.json();
-
-    if (!res.ok) throw data.message || "Prova indisponível.";
-
-    provaId = data.prova_id;
-    tempoRestante = data.tempo_restante;
-
-    renderizarQuestoes(data.questoes);
-    iniciarTimer();
-
-  } catch (err) {
-    document.getElementById("erro").textContent = err;
-  }
-}
-
-/* =============================
-   RENDERIZA QUESTÕES
-============================= */
-
-function renderizarQuestoes(questoes) {
-  const container = document.getElementById("questoes");
-
-  questoes.forEach((q, i) => {
-    const div = document.createElement("div");
-    div.className = "questao";
-
-    let html = `<h3>${i+1}. ${q.enunciado}</h3>`;
-
-    const alternativas = JSON.parse(q.alternativas);
-
-    alternativas.forEach((alt, j) => {
-      html += `
-        <label>
-          <input type="radio" 
-                 name="q${i}" 
-                 value="${j}" 
-                 required
-                 onchange="respostas['${q.Hash_questao}']=${j}">
-          ${alt.texto}
-        </label>
-      `;
-    });
-
-    div.innerHTML = html;
-    container.appendChild(div);
-  });
-}
-
-/* =============================
-   SUBMISSÃO
-============================= */
-
-document.getElementById("provaForm").addEventListener("submit", async e => {
+document.getElementById("disparoForm").onsubmit = async e => {
   e.preventDefault();
 
+  const inicioLocal = document.getElementById("inicio").value;
+  const inicioISO = new Date(inicioLocal).toISOString();
+
   const payload = {
-    prova_id: provaId,
-    respostas: respostas,
-    timestamp: new Date().toISOString(),
-    user_agent: navigator.userAgent
+    modulos: getMultiValues("modulos"),
+    assuntos: getMultiValues("assuntos"),
+    tipos: getMultiValues("tipos"),
+    quantidade: Number(document.getElementById("quantidade").value),
+    duracao_min: Number(document.getElementById("duracao").value),
+    inicio: inicioISO
   };
 
-  await fetch(URL_SUBMISSAO, {
+  console.log("Payload enviado:", payload);
+
+  const r = await fetch(WEBHOOK_WF01, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
   });
 
-  alert("Prova enviada com sucesso.");
-  window.location.href = "final.html";
-});
-
-/* =============================
-   INICIALIZA
-============================= */
-
-carregarProva();
+  if (r.ok) {
+    alert("Prova disparada com sucesso.");
+  } else {
+    alert("Erro ao disparar a prova.");
+  }
+};
 </script>
 
 </body>
