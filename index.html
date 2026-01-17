@@ -1,38 +1,167 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <title>Gerar Prova</title>
+<meta charset="UTF-8">
+<title>Disparo de Prova – UFF</title>
+
+<style>
+:root {
+  --uff-blue: #003A8F;
+  --bg: #F5F7FA;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  background: var(--bg);
+  margin: 0;
+}
+
+header {
+  background: var(--uff-blue);
+  color: white;
+  padding: 20px;
+  text-align: center;
+}
+
+main {
+  max-width: 700px;
+  margin: 30px auto;
+  background: white;
+  padding: 25px;
+  border-radius: 8px;
+}
+
+label {
+  display: block;
+  margin-top: 15px;
+  font-weight: bold;
+}
+
+input, select {
+  width: 100%;
+  padding: 10px;
+  margin-top: 6px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+small {
+  color: #555;
+}
+
+button {
+  margin-top: 25px;
+  width: 100%;
+  padding: 14px;
+  background: var(--uff-blue);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+</style>
 </head>
+
 <body>
 
-<h1>Gerando prova...</h1>
-<div id="conteudo"></div>
+<header>
+  <h1>Universidade Federal Fluminense</h1>
+  <p>Disparo de Prova Online</p>
+</header>
+
+<main>
+
+<form id="disparoForm">
+
+  <label>Módulos</label>
+  <select id="modulos" multiple required>
+    <option value="Anestesiologia">Anestesiologia</option>
+    <option value="Dermatologia">Dermatologia</option>
+    <option value="Equilíbrio Hidroeletrolítico">Equilíbrio Hidroeletrolítico</option>
+    <option value="Farmacologia">Farmacologia</option>
+    <option value="Gastroenterologia">Gastroenterologia</option>
+    <option value="Geriatria">Geriatria</option>
+    <option value="Ginecologia">Ginecologia</option>
+    <option value="Imunologia">Imunologia</option>
+    <option value="Nefrologia">Nefrologia</option>
+    <option value="Neonatologia">Neonatologia</option>
+    <option value="Neurologia">Neurologia</option>
+    <option value="Obstetrícia">Obstetrícia</option>
+    <option value="Pneumologia">Pneumologia</option>
+    <option value="Urologia">Urologia</option>
+    <option value="Psiquiatria infantil">Psiquiatria infantil</option>
+  </select>
+  <small>Segure Ctrl para selecionar múltiplos módulos</small>
+
+  <label>Assuntos</label>
+  <select id="assuntos" multiple required>
+    <option value="temaA">temaA</option>
+    <option value="temaB">temaB</option>
+    <option value="temaC">temaC</option>
+  </select>
+
+  <label>Tipos de questão</label>
+  <select id="tipos" multiple required>
+    <option value="objetiva">Objetiva</option>
+    <option value="correlacao">Correlação</option>
+  </select>
+
+  <label>Quantidade de questões</label>
+  <input id="quantidade" type="number" min="1" required>
+
+  <label>Duração da prova (minutos)</label>
+  <input id="duracao" type="number" min="1" required>
+
+  <label>Data e hora de início</label>
+  <input id="inicio" type="datetime-local" required>
+
+  <button type="submit">Disparar Prova</button>
+
+</form>
+
+</main>
 
 <script>
-const WEBHOOK_URL = "https://webhook.artideia.com.br/webhook/criar_prova";
+const WEBHOOK_WF01 = "https://SEU_N8N/webhook/disparo_prova";
 
-fetch(WEBHOOK_URL, {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    quantidade: 10,
-    duracao_min: 60,
-    modulo: "Anestesiologia"
-  })
-})
-.then(res => res.json())
-.then(data => {
-  document.querySelector("h1").innerText = "Prova criada";
-  document.getElementById("conteudo").innerHTML = `
-    <p><strong>ID da prova:</strong> ${data.prova_id}</p>
-    <p><a href="${data.url}" target="_blank">Acessar prova</a></p>
-  `;
-})
-.catch(err => {
-  document.querySelector("h1").innerText = "Erro ao criar prova";
-  console.error(err);
-});
+function getMultiValues(selectId) {
+  return [...document.getElementById(selectId).selectedOptions].map(o => o.value);
+}
+
+document.getElementById("disparoForm").onsubmit = async e => {
+  e.preventDefault();
+
+  const inicioLocal = document.getElementById("inicio").value;
+  const inicioISO = new Date(inicioLocal).toISOString();
+
+  const payload = {
+    modulos: getMultiValues("modulos"),
+    assuntos: getMultiValues("assuntos"),
+    tipos: getMultiValues("tipos"),
+    quantidade: Number(document.getElementById("quantidade").value),
+    duracao_min: Number(document.getElementById("duracao").value),
+    inicio: inicioISO
+  };
+
+  console.log("Payload enviado:", payload);
+
+  const r = await fetch(WEBHOOK_WF01, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+
+  if (r.ok) {
+    alert("Prova disparada com sucesso.");
+  } else {
+    alert("Erro ao disparar a prova.");
+  }
+};
 </script>
 
 </body>
