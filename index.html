@@ -99,6 +99,7 @@
       color: #b91c1c;
       font-weight: bold;
       text-align: center;
+      margin-bottom: 16px;
     }
   </style>
 </head>
@@ -127,37 +128,39 @@
 
 <script>
   const WEBHOOK_URL = "https://webhook.artideia.com.br/webhook/renderizar_prova";
-
   let intervaloTimer = null;
 
   function mostrarErro(msg) {
     document.getElementById("mensagemErro").innerText = msg;
   }
 
-  // ===============================
-  // CRONÔMETRO (HORA PURA HH:MM:SS)
-  // ===============================
-  function iniciarCronometro(fimHora) {
+  // 🔧 Converte "HH:MM:SS" em Date de hoje
+  function criarDataHoje(hora) {
+    const partes = hora.split(":");
+    if (partes.length !== 3) return null;
+
     const agora = new Date();
-    const partes = fimHora.split(":").map(Number);
-
-    if (partes.length !== 3) {
-      mostrarErro("Horário final inválido.");
-      return;
-    }
-
-    const fim = new Date(
+    return new Date(
       agora.getFullYear(),
       agora.getMonth(),
       agora.getDate(),
-      partes[0],
-      partes[1],
-      partes[2]
+      Number(partes[0]),
+      Number(partes[1]),
+      Number(partes[2])
     );
+  }
+
+  function iniciarCronometro(fimHora) {
+    const fim = criarDataHoje(fimHora);
+
+    if (!fim || isNaN(fim.getTime())) {
+      mostrarErro("Erro ao interpretar o horário final da prova.");
+      return;
+    }
 
     function atualizar() {
-      const agoraAtual = new Date();
-      const diff = fim - agoraAtual;
+      const agora = new Date();
+      const diff = fim - agora;
 
       if (diff <= 0) {
         document.getElementById("cronometro").innerText = "Tempo encerrado";
@@ -206,15 +209,11 @@
       const response = await fetch(WEBHOOK_URL);
       const json = await response.json();
 
-      if (!Array.isArray(json) || json.length === 0) {
-        mostrarErro("Prova não encontrada.");
-        return;
-      }
+      // ✅ Aceita ARRAY ou OBJETO
+      const data = Array.isArray(json) ? json[0] : json;
 
-      const data = json[0];
-
-      if (!data.prova_id || !data.fim || !Array.isArray(data.questoes)) {
-        mostrarErro("JSON da prova inválido ou incompleto.");
+      if (!data || !data.prova_id || !data.fim || !Array.isArray(data.questoes)) {
+        mostrarErro("Prova não encontrada ou dados inválidos.");
         return;
       }
 
