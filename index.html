@@ -1,77 +1,118 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <title>Prova Online</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <title>Prova Online – UFF</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <style>
     body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-      background: #f5f5f5;
+      font-family: "Segoe UI", Roboto, Arial, sans-serif;
+      margin: 0;
+      background: #f2f4f8;
+      color: #333;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      padding: 15px 25px;
+      background: #ffffff;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    header img {
+      height: 45px;
+    }
+
+    header .title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1a237e;
     }
 
     .container {
       max-width: 900px;
-      margin: auto;
-      background: #fff;
-      padding: 25px;
-      border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-
-    h1 {
-      margin-top: 0;
+      margin: 30px auto;
+      background: #ffffff;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
     }
 
     .info {
       display: flex;
       justify-content: space-between;
-      margin-bottom: 20px;
-      font-weight: bold;
+      align-items: center;
+      margin-bottom: 25px;
+      font-weight: 600;
+    }
+
+    .timer {
+      color: #d32f2f;
+      font-size: 18px;
     }
 
     .question {
-      margin-bottom: 25px;
-      padding-bottom: 15px;
-      border-bottom: 1px solid #ddd;
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .question h3 {
+      margin-bottom: 10px;
     }
 
     .alternative {
-      display: block;
+      display: flex;
+      align-items: center;
+      gap: 8px;
       margin: 6px 0;
       cursor: pointer;
     }
 
     button {
-      padding: 12px 20px;
+      width: 100%;
+      padding: 14px;
       font-size: 16px;
+      font-weight: 600;
       cursor: pointer;
       border: none;
-      border-radius: 6px;
+      border-radius: 8px;
       background: #1976d2;
-      color: white;
+      color: #ffffff;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background: #125ea9;
     }
 
     button:disabled {
-      background: #999;
+      background: #9e9e9e;
       cursor: not-allowed;
-    }
-
-    .timer {
-      color: #d32f2f;
     }
   </style>
 </head>
 
 <body>
-  <div class="container">
-    <h1>Prova Online</h1>
+  <!-- TOPO -->
+  <header>
+    <img
+      src="https://redeunisustentavel.com.br/uff/wp-content/uploads/2021/08/logo-uff.png"
+      alt="Logo UFF"
+    />
+    <div class="title">Universidade Federal Fluminense</div>
+  </header>
 
+  <!-- CONTEÚDO -->
+  <div class="container">
     <div class="info">
       <div>ID da Prova: <span id="provaId">---</span></div>
-      <div class="timer">Tempo restante: <span id="tempo">--:--</span></div>
+      <div class="timer">
+        Tempo restante: <span id="tempo">--:--</span>
+      </div>
     </div>
 
     <div id="questoes"></div>
@@ -81,13 +122,16 @@
 
   <script>
     // 🔗 WEBHOOKS
-    const WEBHOOK_PROVA = "https://webhook.artideia.com.br/webhook/renderizar_prova";
-    const WEBHOOK_RESPOSTAS = "https://SEU_WEBHOOK/enviar-respostas";
+    const WEBHOOK_PROVA =
+      "https://webhook.artideia.com.br/webhook/renderizar_prova";
+    const WEBHOOK_RESPOSTAS =
+      "https://SEU_WEBHOOK/enviar-respostas";
 
     let provaId = null;
-    let fimProva = null;
+    let fimProvaTimestamp = null;
     let respostas = {};
     let enviada = false;
+    let timerInterval = null;
 
     async function carregarProva() {
       try {
@@ -100,18 +144,22 @@
         const data = await res.json();
 
         if (data.erro) {
-          alert("Nenhuma prova disponível.");
+          alert("Nenhuma prova disponível no momento.");
           return;
         }
 
         provaId = data.prova_id;
         document.getElementById("provaId").innerText = provaId;
 
-        fimProva = new Date(data.fim);
+        fimProvaTimestamp = Date.parse(data.fim);
+
+        if (isNaN(fimProvaTimestamp)) {
+          alert("Erro ao interpretar o horário final da prova.");
+          return;
+        }
 
         renderizarQuestoes(data.questoes);
         iniciarTimer();
-
       } catch (e) {
         console.error(e);
         alert("Erro ao carregar a prova.");
@@ -130,7 +178,10 @@
         titulo.textContent = `${i + 1}. ${q.Enunciado}`;
         div.appendChild(titulo);
 
-        if (q.Tipo_questao === "multipla" && Array.isArray(q.Alternativas)) {
+        if (
+          q.Tipo_questao === "multipla" &&
+          Array.isArray(q.Alternativas)
+        ) {
           q.Alternativas.forEach((alt) => {
             const label = document.createElement("label");
             label.className = "alternative";
@@ -145,7 +196,9 @@
             });
 
             label.appendChild(input);
-            label.appendChild(document.createTextNode(" " + alt.texto));
+            label.appendChild(
+              document.createTextNode(" " + alt.texto)
+            );
 
             div.appendChild(label);
           });
@@ -158,22 +211,28 @@
     function iniciarTimer() {
       const el = document.getElementById("tempo");
 
-      const interval = setInterval(() => {
-        const agora = new Date();
-        const diff = fimProva - agora;
+      if (timerInterval) {
+        clearInterval(timerInterval);
+      }
+
+      timerInterval = setInterval(() => {
+        const agora = Date.now();
+        const diff = fimProvaTimestamp - agora;
 
         if (diff <= 0) {
-          clearInterval(interval);
+          clearInterval(timerInterval);
           el.innerText = "00:00";
           enviarProva();
           return;
         }
 
-        const min = Math.floor(diff / 60000);
-        const sec = Math.floor((diff % 60000) / 1000);
+        const totalSegundos = Math.floor(diff / 1000);
+        const min = Math.floor(totalSegundos / 60);
+        const sec = totalSegundos % 60;
 
         el.innerText =
-          String(min).padStart(2, "0") + ":" +
+          String(min).padStart(2, "0") +
+          ":" +
           String(sec).padStart(2, "0");
       }, 1000);
     }
@@ -196,7 +255,6 @@
         });
 
         alert("Prova enviada com sucesso.");
-
       } catch (e) {
         console.error(e);
         alert("Erro ao enviar a prova.");
