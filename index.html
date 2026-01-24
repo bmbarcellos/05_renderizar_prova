@@ -134,17 +134,30 @@
     document.getElementById("mensagemErro").innerText = msg;
   }
 
-  function iniciarCronometro(fimISO) {
-    const fim = new Date(fimISO);
+  // ===============================
+  // CRONÔMETRO (HORA PURA HH:MM:SS)
+  // ===============================
+  function iniciarCronometro(fimHora) {
+    const agora = new Date();
+    const partes = fimHora.split(":").map(Number);
 
-    if (isNaN(fim.getTime())) {
-      mostrarErro("Erro ao interpretar o horário final da prova.");
+    if (partes.length !== 3) {
+      mostrarErro("Horário final inválido.");
       return;
     }
 
+    const fim = new Date(
+      agora.getFullYear(),
+      agora.getMonth(),
+      agora.getDate(),
+      partes[0],
+      partes[1],
+      partes[2]
+    );
+
     function atualizar() {
-      const agora = new Date();
-      const diff = fim - agora;
+      const agoraAtual = new Date();
+      const diff = fim - agoraAtual;
 
       if (diff <= 0) {
         document.getElementById("cronometro").innerText = "Tempo encerrado";
@@ -191,9 +204,16 @@
   async function carregarProva() {
     try {
       const response = await fetch(WEBHOOK_URL);
-      const data = await response.json();
+      const json = await response.json();
 
-      if (!data || !data.prova_id || !data.fim || !Array.isArray(data.questoes)) {
+      if (!Array.isArray(json) || json.length === 0) {
+        mostrarErro("Prova não encontrada.");
+        return;
+      }
+
+      const data = json[0];
+
+      if (!data.prova_id || !data.fim || !Array.isArray(data.questoes)) {
         mostrarErro("JSON da prova inválido ou incompleto.");
         return;
       }
