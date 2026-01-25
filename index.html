@@ -130,11 +130,13 @@
   const WEBHOOK_URL = "https://webhook.artideia.com.br/webhook/renderizar_prova";
   let intervaloTimer = null;
 
+  // 💾 respostas + restauração
+  let respostas = JSON.parse(localStorage.getItem("respostas_prova")) || {};
+
   function mostrarErro(msg) {
     document.getElementById("mensagemErro").innerText = msg;
   }
 
-  // 🔧 Converte "HH:MM:SS" em Date de hoje
   function criarDataHoje(hora) {
     const partes = hora.split(":");
     if (partes.length !== 3) return null;
@@ -193,7 +195,11 @@
         <div class="alternativas">
           ${q.Alternativas.map((alt, i) => `
             <label>
-              <input type="radio" name="q${index}" value="${i}">
+              <input type="radio"
+                     name="q${index}"
+                     value="${i}"
+                     ${respostas[index] === i ? "checked" : ""}
+                     onchange="salvarResposta(${index}, ${i})">
               ${alt.texto}
             </label>
           `).join("")}
@@ -204,12 +210,20 @@
     });
   }
 
+  function salvarResposta(questao, alternativa) {
+    respostas[questao] = alternativa;
+  }
+
+  // ⏱️ AUTOSAVE A CADA 60s
+  setInterval(() => {
+    localStorage.setItem("respostas_prova", JSON.stringify(respostas));
+    console.log("Autosave realizado");
+  }, 60000);
+
   async function carregarProva() {
     try {
       const response = await fetch(WEBHOOK_URL);
       const json = await response.json();
-
-      // ✅ Aceita ARRAY ou OBJETO
       const data = Array.isArray(json) ? json[0] : json;
 
       if (!data || !data.prova_id || !data.fim || !Array.isArray(data.questoes)) {
