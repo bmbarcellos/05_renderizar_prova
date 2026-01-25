@@ -99,7 +99,7 @@
 <body>
 
 <header>
-  <img src="https://redeunisustentavel.com.br/uff/wp-content/uploads/2022/03/uff-logo.png" alt="UFF">
+  <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Logo_UFF_%28blue%29.svg" alt="UFF">
   <div class="title">Universidade Federal Fluminense</div>
 </header>
 
@@ -127,8 +127,10 @@
   let intervaloTimer = null;
   let intervaloAutosave = null;
   let violacoes = [];
+  let provaFinalizada = false; // ✅ ajuste
 
   function registrarViolacao(tipo) {
+    if (provaFinalizada) return; // ✅ ajuste
     violacoes.push({
       tipo,
       timestamp: new Date().toISOString(),
@@ -212,6 +214,10 @@
   }
 
   async function enviarProva() {
+    if (provaFinalizada) return;
+    provaFinalizada = true; // ✅ ajuste
+
+    registrarViolacao("SUBMISSAO_MANUAL"); // ✅ ajuste
     clearInterval(intervaloAutosave);
 
     const payload = {
@@ -248,7 +254,6 @@
     intervaloAutosave = setInterval(autosave, 60000);
   }
 
-  // 🔐 CONTROLES DE VIOLAÇÃO
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) registrarViolacao("TROCA_DE_ABA");
   });
